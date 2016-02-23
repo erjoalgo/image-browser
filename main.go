@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"github.com/moovweb/gokogiri"
-
-	// "gopkg.in/xmlpath.v2"
 )
 
 func main() {
@@ -27,41 +25,6 @@ func main() {
 	mux.HandleFunc("/", promptHandler)
 
 	log.Fatal(http.ListenAndServe(":14736", mux))
-
-	/*
-		srcs, _ := extractImageSrcs("http://bing.com/images/search?q=green")
-		fmt.Printf("%#v\n", srcs)
-		return
-		// xmlpath.MustCompile("asd")
-		// path := xmlpath.MustCompile("//a")
-
-		// xpath := `//a[@class="yt-uix-tile-link"]`
-		xpath := `//img`
-
-		// if page, err := ioutil.ReadFile("yt-sample.html"); err != nil {
-		if page, err := ioutil.ReadFile("search?q=china"); err != nil {
-			log.Fatal("file not read")
-			// } else if root, err := xmlpath.Parse(bytes.NewBuffer(file)); err != nil {
-		} else if root, err := gokogiri.ParseHtml(page); err != nil {
-			log.Fatal(err)
-			// } else if value, ok := path.String(root); !ok {
-		} else if value, err := root.Search(xpath); err != nil {
-			log.Fatal("xpath not found: ")
-		} else {
-			// fmt.Printf("Found: %#v", value)
-			for i, node := range value {
-				// fmt.Printf("Found %d: %#v\n", i, node)
-				_ = i
-				fmt.Printf("Found %v: \n", node.Attributes()["src"])
-
-				if _url, err := url.Parse(node.Attributes()["src"].String()); err != nil {
-
-				} else {
-					fmt.Printf("url: %#v\n", _url)
-				}
-				// url = url.Parse(node.Attributes())
-			}
-		}*/
 }
 
 func proxyHandler(w http.ResponseWriter, req *http.Request) {
@@ -69,13 +32,13 @@ func proxyHandler(w http.ResponseWriter, req *http.Request) {
 	if response, err := http.Get(_url); err != nil {
 		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
 	} else {
-		// w.Header().Set("Content-Type", "")
 		w.WriteHeader(200)
+		// w.Header().Set("Content-Type", "")
 		// bytes.NewBuffer(response).WriteTo(w)
 		// response.Write(w) TODO write response directly?
+		// contentType :=
 		bodyReq, _ := ioutil.ReadAll(response.Body)
 		bytes.NewBuffer(bodyReq).WriteTo(w)
-		// contentType :=
 	}
 }
 
@@ -151,10 +114,7 @@ func extractImageSrcs(_url string) ([]string, error) {
 		return nil, fmt.Errorf("xpath problem: %s", err)
 	} else {
 		srcs := make([]string, 0, 100)
-		for i, node := range imgs {
-			// fmt.Printf("Found %d: %#v\n", i, node)
-			_ = i
-			// TODO check src
+		for _, node := range imgs {
 			if srcUrl, err := url.Parse(node.Attributes()["src"].String()); err != nil {
 
 			} else {
@@ -163,7 +123,6 @@ func extractImageSrcs(_url string) ([]string, error) {
 				}
 				srcs = append(srcs, srcUrl.String())
 			}
-			// url = url.Parse(node.Attributes())
 		}
 		return srcs, nil
 	}
