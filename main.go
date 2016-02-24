@@ -8,19 +8,27 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/moovweb/gokogiri"
 )
 
 var internalProxyURL string
+var port string
 
 func main() {
 	flag.StringVar(&internalProxyURL, "proxy", "http://proxy-src.research.ge.com:8080", "proxy for the server")
+	flag.StringVar(&port, "port", os.Getenv("PORT"), "port server")
 	flag.Parse()
+
+	if port == "" {
+		port = "14736" // not provided via cli or env
+	}
 	if internalProxyURL != "" {
 		log.Printf("using proxy: %s", internalProxyURL)
 	}
+	log.Printf("using port: %s", port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/proxy", proxyHandler)
 	mux.HandleFunc("/prompt", promptHandler)
@@ -32,7 +40,7 @@ func main() {
 	})
 	mux.HandleFunc("/", promptHandler)
 
-	log.Fatal(http.ListenAndServe(":14736", mux))
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
 func proxyHandler(w http.ResponseWriter, req *http.Request) {
