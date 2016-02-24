@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,7 +13,14 @@ import (
 	"github.com/moovweb/gokogiri"
 )
 
+var internalProxyURL string
+
 func main() {
+	flag.StringVar(&internalProxyURL, "proxy", "http://proxy-src.research.ge.com:8080", "proxy for the server")
+	flag.Parse()
+	if internalProxyURL != "" {
+		log.Printf("using proxy: %s", internalProxyURL)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/proxy", proxyHandler)
 	mux.HandleFunc("/prompt", promptHandler)
@@ -29,7 +37,19 @@ func main() {
 
 func proxyHandler(w http.ResponseWriter, req *http.Request) {
 	_url := req.URL.RawQuery
-	if response, err := http.Get(_url); err != nil {
+	tr := &http.Transport{
+	// TLSClientConfig:    &tls.Config{RootCAs: pool},
+	// DisableCompression: true,
+	// Proxy func(*Request) (*url.URL, error)
+	}
+	if internalProxyURL != "" {
+		tr.Proxy = func(*http.Request) (*url.URL, error) {
+			return url.Parse(internalProxyURL)
+		}
+	}
+	client := &http.Client{Transport: tr}
+	// if response, err := http.Get(_url); err != nil {
+	if response, err := client.Get(_url); err != nil {
 		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
 	} else {
 		w.WriteHeader(200)
