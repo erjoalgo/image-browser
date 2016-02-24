@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/moovweb/gokogiri"
+	"github.com/erjoalgo/image-browser/Godeps/_workspace/src/github.com/moovweb/gokogiri"
 )
 
 var internalProxyURL string
