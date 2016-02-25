@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bytes"
+	//"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/erjoalgo/image-browser/Godeps/_workspace/src/github.com/moovweb/gokogiri"
 )
+
 
 var client http.Client
 func main() {
@@ -34,9 +36,6 @@ func main() {
 			},
 		}
 	}
-
-
-
 	log.Printf("using port: %s", port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/proxy", proxyHandler)
@@ -53,17 +52,16 @@ func main() {
 
 func proxyHandler(w http.ResponseWriter, req *http.Request) {
 	_url := req.URL.RawQuery
-	log.Println("raw url by proxyHandler: "+_url)
 	if response, err := client.Get(_url); err != nil {
 		http.Error(w, fmt.Sprintf("error fetching url %s:\n%s", _url, err), 400)
 	} else {
 		w.WriteHeader(200)
-		// w.Header().Set("Content-Type", "")pe
-		// bytes.NewBuffer(response).WriteTo(w)
-		// response.Write(w) TODO write response directly?
-		// contentType :=
-		bodyReq, _ := ioutil.ReadAll(response.Body)
-		bytes.NewBuffer(bodyReq).WriteTo(w)
+
+		//bodyReq, _ := ioutil.ReadAll(response.Body)
+		//bytes.NewBuffer(bodyReq).WriteTo(w)
+
+		//this is actually slower
+		io.Copy(w, response.Body)
 	}
 }
 
@@ -91,9 +89,7 @@ window.location = encodeURI("/imgsUrl?"+bingBase+query);//redirect
 
 func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 	_url := req.URL.RawQuery
-	log.Printf("imsUrlHandler")
 	if srcs, err := extractImageSrcs(_url); err != nil {
-		log.Printf("imsUrlHandler err")
 		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
 	} else {
 		HTML_FMT_PRE := `<HTML><HEAD><TITLE>%s</TITLE><BODY>`	
@@ -102,7 +98,6 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 		//IMGTAG_FMT := "<img src=%s>"
 		imgTags := make([]string, len(srcs))
 		for i, src := range srcs {
-			log.Println("pre src: "+src)
 			var newSrc string
 			if !strings.HasPrefix(src, "data:") { //don't proxy literal image data
 				newSrc = "/proxy?" + src
@@ -110,16 +105,14 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 				newSrc = src
 			}
 			//tag := fmt.Sprintf(IMGTAG_FMT, newSrc)
-			log.Println("pre tag: "+newSrc)
 			tag := "<img src="+newSrc+">"
-			log.Println("post tag: "+tag)
 			imgTags[i] = tag
 		}
 		//html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
 		html := fmt.Sprintf(HTML_FMT_PRE, _url)+ strings.Join(imgTags, "\n") + HTML_FMT_POST
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(200)
-		fmt.Fprintf(w, html) //TODO use buffer
+		fmt.Fprint(w, html) //TODO use buffer
 	}
 }
 
@@ -145,6 +138,9 @@ func extractImageSrcs(_url string) ([]string, error) {
 			} else {
 				if srcUrl.Host == "" {
 					srcUrl.Host = urlHost.Host
+				}
+				if srcUrl.Scheme == "" {
+					srcUrl.Scheme = urlHost.Scheme
 				}
 				srcs = append(srcs, srcUrl.String())
 			}
