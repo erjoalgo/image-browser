@@ -18,7 +18,9 @@ var internalProxyURL string
 var port string
 
 func main() {
-	flag.StringVar(&internalProxyURL, "proxy", "http://proxy-src.research.ge.com:8080", "proxy for the server")
+	var defaultProxy string = "http://proxy-src.research.ge.com:8080"
+	defaultProxy = ""
+	flag.StringVar(&internalProxyURL, "proxy", defaultProxy, "proxy for the server")
 	flag.StringVar(&port, "port", os.Getenv("PORT"), "port server")
 	flag.Parse()
 
@@ -39,7 +41,6 @@ func main() {
 		fmt.Fprintf(w, "OK")
 	})
 	mux.HandleFunc("/", promptHandler)
-
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
@@ -150,7 +151,7 @@ func extractImageSrcs(_url string) ([]string, error) {
 					srcUrl.Host = urlHost.Host
 				}
 				if srcUrl.Scheme == "" {
-				   	srcUrl.Scheme = urlHost.Scheme
+					srcUrl.Scheme = urlHost.Scheme
 				}
 				srcs = append(srcs, srcUrl.String())
 			}
