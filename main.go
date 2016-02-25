@@ -8,19 +8,36 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
-	"github.com/moovweb/gokogiri"
+	"github.com/erjoalgo/image-browser/Godeps/_workspace/src/github.com/moovweb/gokogiri"
 )
 
-var internalProxyURL string
-
+var client http.Client
 func main() {
+     var internalProxyURL string
+     var port string
 	flag.StringVar(&internalProxyURL, "proxy", "http://proxy-src.research.ge.com:8080", "proxy for the server")
+	//flag.StringVar(&internalProxyURL, "proxy", "", "proxy for the server")  
+	flag.StringVar(&port, "port", os.Getenv("PORT"), "port server")
 	flag.Parse()
+	
+	if port == "" {
+		port = "14736"
+	}
 	if internalProxyURL != "" {
 		log.Printf("using proxy: %s", internalProxyURL)
+		client.Transport = &http.Transport{
+			Proxy: func(*http.Request) (*url.URL, error) {
+			return url.Parse(internalProxyURL)
+			},
+		}
 	}
+
+
+
+	log.Printf("using port: %s", port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/proxy", proxyHandler)
 	mux.HandleFunc("/prompt", promptHandler)
@@ -31,29 +48,17 @@ func main() {
 		fmt.Fprintf(w, "OK")
 	})
 	mux.HandleFunc("/", promptHandler)
-
-	log.Fatal(http.ListenAndServe(":14736", mux))
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
 func proxyHandler(w http.ResponseWriter, req *http.Request) {
 	_url := req.URL.RawQuery
-	tr := &http.Transport{
-	// TLSClientConfig:    &tls.Config{RootCAs: pool},
-	// DisableCompression: true,
-	// Proxy func(*Request) (*url.URL, error)
-	}
-	if internalProxyURL != "" {
-		tr.Proxy = func(*http.Request) (*url.URL, error) {
-			return url.Parse(internalProxyURL)
-		}
-	}
-	client := &http.Client{Transport: tr}
-	// if response, err := http.Get(_url); err != nil {
+	log.Println("raw url by proxyHandler: "+_url)
 	if response, err := client.Get(_url); err != nil {
-		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
+		http.Error(w, fmt.Sprintf("error fetching url %s:\n%s", _url, err), 400)
 	} else {
 		w.WriteHeader(200)
-		// w.Header().Set("Content-Type", "")
+		// w.Header().Set("Content-Type", "")pe
 		// bytes.NewBuffer(response).WriteTo(w)
 		// response.Write(w) TODO write response directly?
 		// contentType :=
@@ -91,27 +96,27 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("imsUrlHandler err")
 		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
 	} else {
-		HTML_FMT := `
-<HTML>
-<HEAD>
-<TITLE>%s</TITLE>
-%s
-</BODY>
-</HTML>`
+		HTML_FMT_PRE := `<HTML><HEAD><TITLE>%s</TITLE><BODY>`	
+		HTML_FMT_POST := `</BODY></HTML>`
 		// <img src="smiley.gif" alt="Smiley face" height="42" width="42">
-		IMGTAG_FMT := "<img src=%s>"
+		//IMGTAG_FMT := "<img src=%s>"
 		imgTags := make([]string, len(srcs))
 		for i, src := range srcs {
+			log.Println("pre src: "+src)
 			var newSrc string
 			if !strings.HasPrefix(src, "data:") { //don't proxy literal image data
 				newSrc = "/proxy?" + src
 			} else {
 				newSrc = src
 			}
-			tag := fmt.Sprintf(IMGTAG_FMT, newSrc)
+			//tag := fmt.Sprintf(IMGTAG_FMT, newSrc)
+			log.Println("pre tag: "+newSrc)
+			tag := "<img src="+newSrc+">"
+			log.Println("post tag: "+tag)
 			imgTags[i] = tag
 		}
-		html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
+		//html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
+		html := fmt.Sprintf(HTML_FMT_PRE, _url)+ strings.Join(imgTags, "\n") + HTML_FMT_POST
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(200)
 		fmt.Fprintf(w, html) //TODO use buffer
