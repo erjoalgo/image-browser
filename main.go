@@ -122,7 +122,7 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 		html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(200)
-		fmt.Fprintf(w, html) //TODO use buffer
+		fmt.Fprint(w, html) //TODO use buffer
 	}
 }
 
@@ -148,6 +148,9 @@ func extractImageSrcs(_url string) ([]string, error) {
 			} else {
 				if srcUrl.Host == "" {
 					srcUrl.Host = urlHost.Host
+				}
+				if srcUrl.Scheme == "" {
+				   	srcUrl.Scheme = urlHost.Scheme
 				}
 				srcs = append(srcs, srcUrl.String())
 			}
