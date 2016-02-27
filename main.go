@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
-	"github.com/erjoalgo/image-browser/Godeps/_workspace/src/github.com/moovweb/gokogiri"
+	"github.com/moovweb/gokogiri"	
+	//"github.com/erjoalgo/image-browser/Godeps/_workspace/src/github.com/moovweb/gokogiri"
 )
 
 
@@ -20,7 +20,9 @@ var client http.Client
 func main() {
      var internalProxyURL string
      var port string
-	flag.StringVar(&internalProxyURL, "proxy", "http://proxy-src.research.ge.com:8080", "proxy for the server")
+     	//var defaultProxy = "http://proxy-src.research.ge.com:8080"
+     	var defaultProxy = ""
+	flag.StringVar(&internalProxyURL, "proxy", defaultProxy, "proxy for the server")
 	//flag.StringVar(&internalProxyURL, "proxy", "", "proxy for the server")  
 	flag.StringVar(&port, "port", os.Getenv("PORT"), "port server")
 	flag.Parse()
@@ -92,10 +94,9 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 	if srcs, err := extractImageSrcs(_url); err != nil {
 		http.Error(w, fmt.Sprintf("error fetching url: %s", _url), 400)
 	} else {
-		HTML_FMT_PRE := `<HTML><HEAD><TITLE>%s</TITLE><BODY>`	
-		HTML_FMT_POST := `</BODY></HTML>`
+		HTML_FMT := `<HTML><HEAD><TITLE>%s</TITLE><BODY>%s</BODY></HTML>`
 		// <img src="smiley.gif" alt="Smiley face" height="42" width="42">
-		//IMGTAG_FMT := "<img src=%s>"
+		IMGTAG_FMT := "<img src=%s>"
 		imgTags := make([]string, len(srcs))
 		for i, src := range srcs {
 			var newSrc string
@@ -104,12 +105,11 @@ func imgsUrlHandler(w http.ResponseWriter, req *http.Request) {
 			} else {
 				newSrc = src
 			}
-			//tag := fmt.Sprintf(IMGTAG_FMT, newSrc)
-			tag := "<img src="+newSrc+">"
+			tag := fmt.Sprintf(IMGTAG_FMT, newSrc)
 			imgTags[i] = tag
 		}
 		//html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
-		html := fmt.Sprintf(HTML_FMT_PRE, _url)+ strings.Join(imgTags, "\n") + HTML_FMT_POST
+		html := fmt.Sprintf(HTML_FMT, _url, strings.Join(imgTags, "\n"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(200)
 		fmt.Fprint(w, html) //TODO use buffer
